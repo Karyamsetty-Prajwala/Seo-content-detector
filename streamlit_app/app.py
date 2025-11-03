@@ -46,32 +46,79 @@ if uploaded is not None:
     except Exception as e:
         st.sidebar.error(f"Failed to read uploaded file: {e}")
 
-# Normalize corpus text column name if present
+
+# --- Robust corpus normalization + diagnostics (paste into streamlit_app/app.py) ---
+def normalize_corpus_text(df):
+    """
+    Return (df_with_text_col, used_column_name_or_None)
+    Attempts case-insensitive exact matches, substring matches, then title+body fallback.
+    """
+    cols = list(df.columns)
+    lower_to_orig = {c.lower().strip(): c for c in cols}
+
+    # exact candidates in order of preference
+    candidates = ['text','clean_bodytext','bodytext','clean_body_text','body','content','article','extracted_content','body_text','cleantext']
+    # exact/case-insensitive match
+    for cand in candidates:
+        if cand in lower_to_orig:
+            orig = lower_to_orig[cand]
+            df['text'] = df[orig].astype(str)
+            return df, orig
+
+    # substring match (e.g., 'body', 'content', 'article' anywhere)
+    for lower_name, orig in lower_to_orig.items():
+        if any(tok in lower_name for tok in ('body','content','article','clean','text')):
+            df['text'] = df[orig].astype(str)
+            return df, orig
+
+    # fallback: try title + some body-like column
+    title_col = None
+    body_col = None
+    for lower_name, orig in lower_to_orig.items():
+        if 'title' == lower_name:
+            title_col = orig
+        if any(tok in lower_name for tok in ('body','content','article')):
+            body_col = orig
+    if body_col:
+        if title_col:
+            df['text'] = (df[title_col].fillna('') + ". " + df[body_col].fillna('')).astype(str)
+            return df, f"{title_col}+{body_col}"
+        else:
+            df['text'] = df[body_col].astype(str)
+            return df, body_col
+
+    # nothing usable found
+    return None, None
+
+# Use it (replace your earlier normalization)
 if isinstance(corpus_df, pd.DataFrame):
-    # normalise column to text
-    text_candidates = ['text','clean_bodytext','bodytext','body','content','article','parsed_text']
-    found = False
-    for col in text_candidates:
-        if col in corpus_df.columns:
-            corpus_df['text'] = corpus_df[col].astype(str)
-            found = True
-            break
+    # show raw columns first (diagnostic)
+    st.sidebar.markdown("**Corpus columns:**")
+    try:
+        st.sidebar.write(list(corpus_df.columns))
+    except Exception:
+        st.sidebar.write("Unable to list columns")
 
-    if not found:
-        st.warning("Corpus has no usable text column — similarity disabled.")
+    # normalize
+    corpus_df_normalized, used_col = normalize_corpus_text(corpus_df)
+    if corpus_df_normalized is None:
+        st.sidebar.error("Corpus has no usable text column — similarity disabled.")
+        st.sidebar.info("If your file uses a non-standard column name, re-upload a CSV with a text column, or rename a column to 'text'.")
         corpus_df = None
-
-    # DIAGNOSTIC: print corpus columns so we know what's actually in the CSV
-    if isinstance(corpus_df, pd.DataFrame):
-        st.sidebar.write("Corpus columns:", list(corpus_df.columns))
-        # also show first row to inspect names/values
+    else:
+        corpus_df = corpus_df_normalized
+        st.sidebar.success(f"Using corpus text column: **{used_col}**")
+        # show sample value for verification
         try:
-            st.sidebar.write("Sample column names and first row values:")
-            st.sidebar.write(corpus_df.head(1).T)
+            sample_len = corpus_df['text'].str.strip().astype(bool).sum()
+            st.sidebar.write(f"Non-empty text rows: {sample_len} of {len(corpus_df)}")
+            st.sidebar.write("Sample (first row, truncated):")
+            st.sidebar.write(corpus_df['text'].astype(str).iloc[0][:300] if len(corpus_df)>0 else "")
         except Exception:
             pass
 else:
-    st.sidebar.write("No corpus DataFrame loaded yet.")
+    st.sidebar.info("No corpus DataFrame loaded yet.")
+# --- end normalization block ---
 
 
 
