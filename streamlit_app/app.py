@@ -61,6 +61,19 @@ if isinstance(corpus_df, pd.DataFrame):
         st.warning("Corpus has no usable text column — similarity disabled.")
         corpus_df = None
 
+    # DIAGNOSTIC: print corpus columns so we know what's actually in the CSV
+    if isinstance(corpus_df, pd.DataFrame):
+        st.sidebar.write("Corpus columns:", list(corpus_df.columns))
+        # also show first row to inspect names/values
+        try:
+            st.sidebar.write("Sample column names and first row values:")
+            st.sidebar.write(corpus_df.head(1).T)
+        except Exception:
+            pass
+else:
+    st.sidebar.write("No corpus DataFrame loaded yet.")
+
+
 
 
 # Initialize scorer (loads quality_model.pkl if present; uses rule fallback otherwise)
