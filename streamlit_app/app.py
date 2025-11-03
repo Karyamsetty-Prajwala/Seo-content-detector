@@ -129,6 +129,22 @@ if analyze:
                 st.error(f"Similarity check failed: {e}")
         else:
             st.info("No corpus loaded for similarity checks (enable sidebar option or upload).")
+# ---- robust corpus text normalization (paste into app.py) ----
+if isinstance(corpus_df, pd.DataFrame):
+    # List of candidate columns in order of preference
+    candidates = ['text', 'clean_bodytext', 'bodytext', 'body', 'content', 'extracted_content', 'article']
+    found = False
+    for col in candidates:
+        if col in corpus_df.columns:
+            if col != 'text':
+                corpus_df['text'] = corpus_df[col].astype(str)
+            else:
+                corpus_df['text'] = corpus_df['text'].astype(str)
+            found = True
+            break
+    if not found:
+        st.sidebar.warning("Corpus has no recognizable text column — similarity disabled.")
+        corpus_df = None
 
 st.markdown("---")
 st.markdown("Notes: uses TF-IDF similarity and simple readability & length rules. For semantic similarity use precomputed embeddings.")
