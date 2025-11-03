@@ -19,7 +19,7 @@ jupyter notebook notebooks/seo_pipeline.ipynb
     → enter any URL
     → result prints JSON including similarity matches
    
-4)  Deplloyed Streamlit URL: 
+4)  Deployed Streamlit URL: https://zsu6hjne2afb6y76bklvtv.streamlit.app/
 5) Key Decisions
 TF-IDF used for similarity — lightweight + interpretable
 
