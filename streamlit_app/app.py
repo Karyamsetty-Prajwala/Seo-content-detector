@@ -48,16 +48,19 @@ if uploaded is not None:
 
 # Normalize corpus text column name if present
 if isinstance(corpus_df, pd.DataFrame):
-    if 'text' not in corpus_df.columns:
-        if 'clean_bodytext' in corpus_df.columns:
-            corpus_df['text'] = corpus_df['clean_bodytext'].astype(str)
-        elif 'bodytext' in corpus_df.columns:
-            corpus_df['text'] = corpus_df['bodytext'].astype(str)
-        elif 'body' in corpus_df.columns:
-            corpus_df['text'] = corpus_df['body'].astype(str)
-        else:
-            st.sidebar.warning("Corpus has no 'text' column — similarity disabled.")
-            corpus_df = None
+    # normalise column to text
+    text_candidates = ['text','clean_bodytext','bodytext','body','content','article','parsed_text']
+    found = False
+    for col in text_candidates:
+        if col in df.columns:
+            df['text'] = df[col].astype(str)
+            found = True
+            break
+
+    if not found:
+        st.warning("Corpus has no usable text column — similarity disabled.")
+        df = None
+
 
 # Initialize scorer (loads quality_model.pkl if present; uses rule fallback otherwise)
 scorer = QualityScorer(model_path=APP_DIR / "models" / "quality_model.pkl")
