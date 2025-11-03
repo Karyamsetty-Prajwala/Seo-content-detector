@@ -52,14 +52,15 @@ if isinstance(corpus_df, pd.DataFrame):
     text_candidates = ['text','clean_bodytext','bodytext','body','content','article','parsed_text']
     found = False
     for col in text_candidates:
-        if col in df.columns:
-            df['text'] = df[col].astype(str)
+        if col in corpus_df.columns:
+            corpus_df['text'] = corpus_df[col].astype(str)
             found = True
             break
 
     if not found:
         st.warning("Corpus has no usable text column — similarity disabled.")
-        df = None
+        corpus_df = None
+
 
 
 # Initialize scorer (loads quality_model.pkl if present; uses rule fallback otherwise)
