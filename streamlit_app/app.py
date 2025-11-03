@@ -119,6 +119,52 @@ if isinstance(corpus_df, pd.DataFrame):
 else:
     st.sidebar.info("No corpus DataFrame loaded yet.")
 
+# --- After you've detected/assigned corpus_df['text'] = ...  add this block ---
+
+# If the stored 'text' looks like HTML (starts with <!doctype or contains <html>), extract readable text
+def _looks_like_html(s):
+    if not isinstance(s, str) or len(s) < 20:
+        return False
+    s_low = s.strip().lower()
+    return s_low.startswith("<!doctype") or s_low.startswith("<html") or "<html" in s_low[:200] or "<!doctype" in s_low[:200]
+
+# only attempt extraction if there is any HTML-like row
+try:
+    sample_val = corpus_df['text'].astype(str).iloc[0] if len(corpus_df) > 0 else ""
+except Exception:
+    sample_val = ""
+
+if _looks_like_html(sample_val):
+    st.sidebar.info("Detected HTML in corpus text column — extracting body text now (this may take a moment).")
+    # run extraction for all rows (consider caching or pre-saving if corpus large)
+    cleaned = []
+    for i, raw in enumerate(corpus_df['text'].astype(str)):
+        try:
+            # use the extract_main_text function you already have
+            body = extract_main_text(raw)
+            # fallback: if extraction empty, keep original shortened text
+            if not body or len(body.strip()) < 50:
+                cleaned.append(raw)   # keep original to avoid data loss
+            else:
+                cleaned.append(body)
+        except Exception:
+            cleaned.append(raw)
+    corpus_df['text'] = cleaned
+    st.sidebar.success("Extracted text for corpus (first row preview updated).")
+    # (optional) show a small preview
+    try:
+        st.sidebar.write("Sample (first row, truncated):")
+        st.sidebar.write(corpus_df['text'].iloc[0][:300])
+    except Exception:
+        pass
+else:
+    # not HTML; show the existing preview (as before)
+    try:
+        st.sidebar.write("Sample (first row, truncated):")
+        st.sidebar.write(corpus_df['text'].astype(str).iloc[0][:300] if len(corpus_df)>0 else "")
+    except Exception:
+        pass
+# --- end extraction block ---
 
 
 # Initialize scorer (loads quality_model.pkl if present; uses rule fallback otherwise)
